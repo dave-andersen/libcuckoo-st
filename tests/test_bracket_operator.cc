@@ -17,7 +17,7 @@
 typedef uint32_t Type;
 typedef cuckoohash_map<Type, Type> Table;
 
-const size_t thread_num = sysconf(_SC_NPROCESSORS_ONLN);
+const size_t thread_num = 1;
 const size_t power = 10;
 const size_t size = 1L << power;
 
