@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.67])
-AC_INIT([libcuckoo], [1.0], [fawn-dev@mailman.srv.cs.cmu.edu])
+AC_INIT([libcuckoo-st], [1.0], [fawn-dev@mailman.srv.cs.cmu.edu])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_HEADERS([config.h])
 
@@ -102,7 +102,7 @@ AH_BOTTOM([#if HAVE_STDBOOL_H
 
 
 AC_CONFIG_FILES([ Makefile
-                  libcuckoo/Makefile
+                  libcuckoo-st/Makefile
                   tests/Makefile
                   examples/Makefile
                 ])

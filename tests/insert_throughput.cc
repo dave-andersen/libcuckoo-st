@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include <libcuckoo/cuckoohash_map.hh>
+#include <libcuckoo-st/cuckoohash_st_map.hh>
 #include "test_util.cc"
 
 typedef uint32_t KeyType;

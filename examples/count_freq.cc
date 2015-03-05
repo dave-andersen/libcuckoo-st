@@ -5,7 +5,7 @@
 #include <random>
 #include <chrono>
 #include <cstdint>
-#include <libcuckoo/cuckoohash_map.hh>
+#include <libcuckoo/cuckoohash_st_map.hh>
 #include <libcuckoo/city_hasher.hh>
 #include <limits>
 #include <vector>

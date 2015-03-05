@@ -1,5 +1,5 @@
-DIST_SUBDIRS = libcuckoo tests examples
-SUBDIRS = libcuckoo
+DIST_SUBDIRS = libcuckoo-st tests examples
+SUBDIRS = libcuckoo-st
 CLEANFILES = core *.core *~
 DISTCLEANFILES = autom4te*.cache config.status config.log
 MAINTAINERCLEANFILES = aclocal.m4 install-sh mkinstalldirs \

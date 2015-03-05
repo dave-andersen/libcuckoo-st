@@ -8,7 +8,7 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <libcuckoo/cuckoohash_map.hh>
+#include <libcuckoo-st/cuckoohash_st_map.hh>
 
 std::mutex print_lock;
 typedef std::lock_guard<std::mutex> mutex_guard;

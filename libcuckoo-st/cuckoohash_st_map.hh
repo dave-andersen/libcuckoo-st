@@ -23,8 +23,8 @@
 #include <utility>
 #include <vector>
 
-#include "cuckoohash_config.h"
-#include "cuckoohash_util.h"
+#include "cuckoohash_st_config.h"
+#include "cuckoohash_st_util.h"
 
 //! cuckoohash_map is the hash table class.
 template <class Key, class T, class Hash = std::hash<Key>,
