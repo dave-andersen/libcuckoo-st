@@ -298,12 +298,10 @@ private:
     // list, whose data pointer it can modify without contention.
     class GlobalHazardPointerList {
         std::list<TableInfo*> hp_;
-        std::mutex lock_;
     public:
         // new_hazard_pointer creates and returns a new hazard pointer for a
         // thread.
         TableInfo** new_hazard_pointer() {
-            std::unique_lock<std::mutex> ul(lock_);
             hp_.emplace_back(nullptr);
             return &hp_.back();
         }
@@ -313,7 +311,6 @@ private:
         // a pointer in old_pointers, it deletes that node from the list.
         void delete_unused(std::list<std::unique_ptr<TableInfo>>&
                            old_pointers) {
-            std::unique_lock<std::mutex> ul(lock_);
             old_pointers.remove_if(
                 [this](const std::unique_ptr<TableInfo>& ptr) {
                     return std::find(hp_.begin(), hp_.end(), ptr.get()) ==
@@ -450,7 +447,6 @@ public:
         HazardPointerUnsetter hpu;
 
         const cuckoo_status st = cuckoo_find(key, val, hv, ti, i1, i2);
-        unlock_two(ti, i1, i2);
         return (st == ok);
     }
 
@@ -497,7 +493,6 @@ public:
         HazardPointerUnsetter hpu;
 
         const cuckoo_status st = cuckoo_delete(key, hv, ti, i1, i2);
-        unlock_two(ti, i1, i2);
         return (st == ok);
     }
 
@@ -512,7 +507,6 @@ public:
         HazardPointerUnsetter hpu;
 
         const cuckoo_status st = cuckoo_update(key, val, hv, ti, i1, i2);
-        unlock_two(ti, i1, i2);
         return (st == ok);
     }
 
@@ -530,7 +524,6 @@ public:
         HazardPointerUnsetter hpu;
 
         const cuckoo_status st = cuckoo_update_fn(key, fn, hv, ti, i1, i2);
-        unlock_two(ti, i1, i2);
         return (st == ok);
     }
 
@@ -553,7 +546,6 @@ public:
             HazardPointerUnsetter hpu;
             const cuckoo_status st = cuckoo_update_fn(key, fn, hv, ti, i1, i2);
             if (st == ok) {
-                unlock_two(ti, i1, i2);
                 return;
             }
 
@@ -638,35 +630,6 @@ private:
     static hasher hashfn;
     static key_equal eqfn;
 
-    // lock locks the given bucket index.
-    static inline void lock(TableInfo* ti, const size_t i) {
-    }
-
-    // unlock unlocks the given bucket index.
-    static inline void unlock(TableInfo* ti, const size_t i) {
-    }
-
-    // lock_two locks the two bucket indexes, always locking the earlier index
-    // first to avoid deadlock. If the two indexes are the same, it just locks
-    // one.
-    static void lock_two(TableInfo* ti, size_t i1, size_t i2) {
-    }
-
-    // unlock_two unlocks both of the given bucket indexes, or only one if they
-    // are equal. Order doesn't matter here.
-    static void unlock_two(TableInfo* ti, size_t i1, size_t i2) {
-    }
-
-    // lock_three locks the three bucket indexes in numerical order.
-    static void lock_three(TableInfo* ti, size_t i1,
-                           size_t i2, size_t i3) {
-    }
-
-    // unlock_three unlocks the three given buckets
-    static void unlock_three(TableInfo* ti, size_t i1,
-                             size_t i2, size_t i3) {
-    }
-
     // snapshot_table_nolock loads the table info pointer and sets the hazard
     // pointer, whithout locking anything. There is a possibility that after
     // loading a snapshot and setting the hazard pointer, an expansion runs and
@@ -709,10 +672,8 @@ private:
             }
             i1 = index_hash(ti, hv);
             i2 = alt_index(ti, hv, i1);
-            lock_two(ti, i1, i2);
             // Check the table info again
             if (ti != table_info.load()) {
-                unlock_two(ti, i1, i2);
                 continue;
             }
             return std::make_tuple(ti, i1, i2);
