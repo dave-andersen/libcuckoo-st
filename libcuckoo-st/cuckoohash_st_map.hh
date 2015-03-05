@@ -272,13 +272,13 @@ private:
         std::vector<Bucket> buckets_;
 
         // per-core counters for the number of inserts and deletes
-        std::vector<cacheint> num_inserts, num_deletes;
+        int64_t num_inserts, num_deletes;
 
         // The constructor allocates the memory for the table. It allocates one
         // cacheint for each core in num_inserts and num_deletes.
         TableInfo(const size_t hashpower)
             : hashpower_(hashpower), buckets_(hashsize(hashpower_)),
-              num_inserts(kNumCores), num_deletes(kNumCores) {}
+              num_inserts(0), num_deletes(0) {}
 
         ~TableInfo() {}
     };
@@ -344,19 +344,6 @@ private:
             *hazard_pointer = nullptr;
         }
     };
-
-    // counterid stores the per-thread counter index of each thread.
-    static __thread int counterid;
-
-    // check_counterid checks if the counterid has already been determined. If
-    // not, it assigns a counterid to the current thread by picking a random
-    // core. This should be called at the beginning of any function that changes
-    // the number of elements in the table.
-    static inline void check_counterid() {
-        if (counterid < 0) {
-            counterid = rand() % kNumCores;
-        }
-    }
 
     // reserve_calc takes in a parameter specifying a certain number of slots
     // for a table and returns the smallest hashpower that will hold n elements.
@@ -471,7 +458,6 @@ public:
     //! returns false, otherwise it returns true.
     bool insert(const key_type& key, const mapped_type& val) {
         check_hazard_pointer();
-        check_counterid();
         size_t hv = hashed_key(key);
         TableInfo* ti;
         size_t i1, i2;
@@ -485,7 +471,6 @@ public:
     //! it returns true.
     bool erase(const key_type& key) {
         check_hazard_pointer();
-        check_counterid();
         size_t hv = hashed_key(key);
         TableInfo* ti;
         size_t i1, i2;
@@ -535,7 +520,6 @@ public:
     template <typename Updater>
     void upsert(const key_type& key, Updater fn, const mapped_type& val) {
         check_hazard_pointer();
-        check_counterid();
         size_t hv = hashed_key(key);
         TableInfo* ti;
         size_t i1, i2;
@@ -1072,7 +1056,7 @@ private:
             ti->buckets_[i].partial(j) = partial;
         }
         ti->buckets_[i].setKV(j, key, val);
-        ti->num_inserts[counterid].num.fetch_add(1, std::memory_order_relaxed);
+        ti->num_inserts++;
     }
 
     // try_find_insert_bucket will search the bucket and store the index of an
@@ -1115,7 +1099,7 @@ private:
             }
             if (eqfn(ti->buckets_[i].key(j), key)) {
                 ti->buckets_[i].eraseKV(j);
-                ti->num_deletes[counterid].num.fetch_add(
+                ti->num_deletes[0].num.fetch_add(
                     1, std::memory_order_relaxed);
                 return true;
             }
@@ -1330,22 +1314,13 @@ private:
         const size_t num_buckets = ti->buckets_.size();
         ti->buckets_.clear();
         ti->buckets_.resize(num_buckets);
-        for (size_t i = 0; i < ti->num_inserts.size(); ++i) {
-            ti->num_inserts[i].num.store(0);
-            ti->num_deletes[i].num.store(0);
-        }
+	ti->num_inserts = ti->num_deletes = 0;
         return ok;
     }
 
     // cuckoo_size returns the number of elements in the given table.
     size_t cuckoo_size(const TableInfo* ti) const {
-        size_t inserts = 0;
-        size_t deletes = 0;
-        for (size_t i = 0; i < ti->num_inserts.size(); ++i) {
-            inserts += ti->num_inserts[i].num.load();
-            deletes += ti->num_deletes[i].num.load();
-        }
-        return inserts-deletes;
+	return ti->num_inserts - ti->num_deletes;
     }
 
     // cuckoo_loadfactor returns the load factor of the given table.
@@ -1824,9 +1799,6 @@ public:
 template <class Key, class T, class Hash, class Pred>
     __thread typename cuckoohash_map<Key, T, Hash, Pred>::TableInfo**
     cuckoohash_map<Key, T, Hash, Pred>::hazard_pointer = nullptr;
-
-template <class Key, class T, class Hash, class Pred>
-    __thread int cuckoohash_map<Key, T, Hash, Pred>::counterid = -1;
 
 template <class Key, class T, class Hash, class Pred>
     typename cuckoohash_map<Key, T, Hash, Pred>::hasher
