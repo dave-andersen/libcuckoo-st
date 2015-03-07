@@ -52,8 +52,8 @@ public:
         }
     }
 
-    cuckoohash_map<KeyType, ValType> smalltable;
-    cuckoohash_map<KeyType, ValType> bigtable;
+    cuckoohash_st_map<KeyType, ValType> smalltable;
+    cuckoohash_st_map<KeyType, ValType> bigtable;
     KeyType keys[numkeys];
     ValType vals[numkeys];
     KeyType nonkeys[numkeys];

@@ -15,7 +15,7 @@
 #include "test_util.cc"
 
 typedef uint32_t Type;
-typedef cuckoohash_map<Type, Type> Table;
+typedef cuckoohash_st_map<Type, Type> Table;
 
 const size_t thread_num = 1;
 const size_t power = 10;

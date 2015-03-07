@@ -160,7 +160,7 @@ std::string generateKey<std::string>(size_t i) {
 // An overloaded function that does the inserts for different table types.
 // Inserts with a value of 0.
 template <class KType, class VType>
-void insert_thread(cuckoohash_map<KType, VType>& table,
+void insert_thread(cuckoohash_st_map<KType, VType>& table,
                    typename std::vector<KType>::iterator begin,
                    typename std::vector<KType>::iterator end) {
     for (;begin != end; begin++) {
@@ -181,7 +181,7 @@ struct cacheint {
 // the keys in the given range should either be in the table or not in the
 // table.
 template <class KType, class VType>
-void read_thread(cuckoohash_map<KType, VType>& table,
+void read_thread(cuckoohash_st_map<KType, VType>& table,
                  typename std::vector<KType>::iterator begin,
                  typename std::vector<KType>::iterator end,
                  cacheint& reads,

@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef ST_UTIL_H
+#define ST_UTIL_H
 
 #include <pthread.h>
 #include "cuckoohash_st_config.h" // for LIBCUCKOO_DEBUG

@@ -3,7 +3,7 @@
  *  libcuckoo is a high-performance, memory efficient hash table that
  *  supports concurrent reads and writes.
  *
- *  \ref cuckoohash_map is the class of the hash table. Its interface
+ *  \ref cuckoohash_st_map is the class of the hash table. Its interface
  *  resembles that of STL's unordered_map but does contain some
  *  important differences.
  *

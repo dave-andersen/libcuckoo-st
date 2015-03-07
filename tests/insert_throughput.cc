@@ -159,11 +159,11 @@ int main(int argc, char** argv) {
     }
 
     if (use_strings) {
-        auto *env = new InsertEnvironment<cuckoohash_map<KeyType2, ValType>>;
+        auto *env = new InsertEnvironment<cuckoohash_st_map<KeyType2, ValType>>;
         InsertThroughputTest(env);
         delete env;
     } else {
-        auto *env = new InsertEnvironment<cuckoohash_map<KeyType, ValType>>;
+        auto *env = new InsertEnvironment<cuckoohash_st_map<KeyType, ValType>>;
         InsertThroughputTest(env);
         delete env;
     }

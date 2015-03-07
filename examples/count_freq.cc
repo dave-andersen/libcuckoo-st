@@ -14,7 +14,7 @@
 #include <utility>
 
 typedef uint32_t KeyType;
-typedef cuckoohash_map<KeyType, size_t, CityHasher<KeyType> > Table;
+typedef cuckoohash_st_map<KeyType, size_t, CityHasher<KeyType> > Table;
 const size_t thread_num = 8;
 const size_t total_inserts = 10000000;
 

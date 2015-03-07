@@ -163,11 +163,11 @@ int main(int argc, char** argv) {
                 flag_vars, flag_help, sizeof(flags)/sizeof(const char*));
 
     if (use_strings) {
-        auto *env = new ReadEnvironment<cuckoohash_map<KeyType2, ValType>>;
+        auto *env = new ReadEnvironment<cuckoohash_st_map<KeyType2, ValType>>;
         ReadThroughputTest(env);
         delete env;
     } else {
-        auto *env = new ReadEnvironment<cuckoohash_map<KeyType, ValType>>;
+        auto *env = new ReadEnvironment<cuckoohash_st_map<KeyType, ValType>>;
         ReadThroughputTest(env);
         delete env;
     }
