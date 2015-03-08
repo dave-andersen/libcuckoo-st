@@ -1,23 +1,19 @@
 libcuckoo
 =========
 
-libcuckoo provides a high-performance, compact hash table that allows
-multiple concurrent reader and writer threads.
+This is a quick hack derivative of libcuckoo that strips out
+the concurrency support.  I wanted an easy-to-use cuckoo table
+for C++ purposes, and this is it.  It's not a shining example
+of how to do things.  This code may disappear or change with no
+notice.  If we make it real, it'll show up in the 'efficient'
+repository.  A happier solution would be to templatize libcuckoo
+to the extent that none of this is necessary.  Hope to get there
+soon.
 
-The Doxygen-generated documentation is available at the
-[project page](http://efficient.github.io/libcuckoo/).
+Please see the original libcuckoo for more information:
+https://github.com/efficient/libcuckoo
 
 Authors: Manu Goyal, Bin Fan, Xiaozhou Li, David G. Andersen, and Michael Kaminsky
-
-For details about this algorithm and citations, please refer to
-our papers in [NSDI 2013][1] and [EuroSys 2014][2]. Some of the details of the hashing
-algorithm have been improved since that work (e.g., the previous algorithm
-in [1] serializes all writer threads, while our current
-implementation supports multiple concurrent writers), however, and this source
-code is now the definitive reference.
-
-   [1]: http://www.cs.cmu.edu/~dga/papers/memc3-nsdi2013.pdf "MemC3: Compact and Concurrent Memcache with Dumber Caching and Smarter Hashing"
-   [2]: http://www.cs.princeton.edu/~mfreed/docs/cuckoo-eurosys14.pdf "Algorithmic Improvements for Fast Concurrent Cuckoo Hashing"
 
 Requirements
 ================
