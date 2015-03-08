@@ -114,9 +114,6 @@ private:
     static const bool is_simple =
         std::is_pod<key_type>::value && sizeof(key_type) <= 8;
 
-    // number of cores on the machine
-    static const size_t kNumCores;
-
     // The maximum number of cuckoo operations per insert. This must be less
     // than or equal to ST_SLOT_PER_BUCKET^(MAX_BFS_DEPTH+1)
     static const size_t MAX_CUCKOO_COUNT = 500;
@@ -230,14 +227,6 @@ private:
         }
     };
 
-    // cacheint is a cache-aligned atomic integer type.
-    struct cacheint {
-        std::atomic<size_t> num;
-        cacheint(): num(0) {}
-        cacheint(size_t x): num(x) {}
-        cacheint(cacheint&& x): num(x.num.load()) {}
-    } __attribute__((aligned(64)));
-
     // TableInfo contains the entire state of the hashtable. We allocate one
     // TableInfo pointer per hash table and store all of the table memory in it,
     // so that all the data can be atomically swapped during expansion.
@@ -249,60 +238,16 @@ private:
         std::vector<Bucket> buckets_;
 
         // per-core counters for the number of inserts and deletes
-        int64_t num_inserts, num_deletes;
+        int64_t num_items;
 
         // The constructor allocates the memory for the table. It allocates one
         // cacheint for each core in num_inserts and num_deletes.
         TableInfo(const size_t hashpower)
             : hashpower_(hashpower), buckets_(hashsize(hashpower_)),
-              num_inserts(0), num_deletes(0) {}
+              num_items(0) {}
 
         ~TableInfo() {}
     };
-
-    // This is a hazard pointer, used to indicate which version of the TableInfo
-    // is currently being used in the thread. Since cuckoohash_st_map operations
-    // can run simultaneously in different threads, this variable is thread
-    // local. Note that this variable can be safely shared between different
-    // cuckoohash_st_map instances, since multiple operations cannot occur
-    // simultaneously in one thread. The hazard pointer variable points to a
-    // pointer inside a global list of pointers, that each map checks before
-    // deleting any old TableInfo pointers.
-    static __thread TableInfo** hazard_pointer;
-
-    // A GlobalHazardPointerList stores a list of pointers that cannot be
-    // deleted by an expansion thread. Each thread gets its own node in the
-    // list, whose data pointer it can modify without contention.
-    class GlobalHazardPointerList {
-        std::list<TableInfo*> hp_;
-    public:
-        // new_hazard_pointer creates and returns a new hazard pointer for a
-        // thread.
-        TableInfo** new_hazard_pointer() {
-            hp_.emplace_back(nullptr);
-            return &hp_.back();
-        }
-
-        // delete_unused scans the list of hazard pointers, deleting any
-        // pointers in old_pointers that aren't in this list. If it does delete
-        // a pointer in old_pointers, it deletes that node from the list.
-        void delete_unused(std::list<std::unique_ptr<TableInfo>>&
-                           old_pointers) {
-            old_pointers.remove_if(
-                [this](const std::unique_ptr<TableInfo>& ptr) {
-                    return std::find(hp_.begin(), hp_.end(), ptr.get()) ==
-                        hp_.end();
-                });
-        }
-    };
-
-    // As long as the thread_local hazard_pointer is static, which means each
-    // template instantiation of a cuckoohash_st_map class gets its own per-thread
-    // hazard pointer, then each template instantiation of a cuckoohash_st_map
-    // class can get its own global_hazard_pointers list, since different
-    // template instantiations won't interfere with each other.
-    static GlobalHazardPointerList global_hazard_pointers;
-
 
     // reserve_calc takes in a parameter specifying a certain number of slots
     // for a table and returns the smallest hashpower that will hold n elements.
@@ -917,12 +862,6 @@ private:
 
         if (!done) {
             return failure;
-        } else if (ti != table_info.load()) {
-            // Unlock i1 and i2 and signal to cuckoo_insert to try again. Since
-            // we set the hazard pointer to be ti, this check isn't susceptible
-            // to an ABA issue, since a new pointer can't have the same address
-            // as ti.
-            return failure_under_expansion;
         }
         return ok;
     }
@@ -957,7 +896,7 @@ private:
             ti->buckets_[i].partial(j) = partial;
         }
         ti->buckets_[i].setKV(j, key, val);
-        ti->num_inserts++;
+        ti->num_items++;
     }
 
     // try_find_insert_bucket will search the bucket and store the index of an
@@ -1097,12 +1036,7 @@ private:
         size_t insert_bucket = 0;
         size_t insert_slot = 0;
         cuckoo_status st = run_cuckoo(ti, i1, i2, insert_bucket, insert_slot);
-        if (st == failure_under_expansion) {
-            // The run_cuckoo operation operated on an old version of the table,
-            // so we have to try again. We signal to the calling insert method
-            // to try again by returning failure_under_expansion.
-            return failure_under_expansion;
-        } else if (st == ok) {
+        if (st == ok) {
             assert(!ti->buckets_[insert_bucket].occupied(insert_slot));
             assert(insert_bucket == index_hash(ti, hv) ||
                    insert_bucket == alt_index(ti, hv, index_hash(ti, hv)));
@@ -1215,13 +1149,13 @@ private:
         const size_t num_buckets = ti->buckets_.size();
         ti->buckets_.clear();
         ti->buckets_.resize(num_buckets);
-	ti->num_inserts = ti->num_deletes = 0;
+	ti->num_items = 0;
         return ok;
     }
 
     // cuckoo_size returns the number of elements in the given table.
     size_t cuckoo_size(const TableInfo* ti) const {
-	return ti->num_inserts - ti->num_deletes;
+        return ti->num_items;
     }
 
     // cuckoo_loadfactor returns the load factor of the given table.
@@ -1676,9 +1610,6 @@ public:
 };
 
 // Initializing the static members
-template <class Key, class T, class Hash, class Pred>
-    __thread typename cuckoohash_st_map<Key, T, Hash, Pred>::TableInfo**
-    cuckoohash_st_map<Key, T, Hash, Pred>::hazard_pointer = nullptr;
 
 template <class Key, class T, class Hash, class Pred>
     typename cuckoohash_st_map<Key, T, Hash, Pred>::hasher
@@ -1687,13 +1618,6 @@ template <class Key, class T, class Hash, class Pred>
 template <class Key, class T, class Hash, class Pred>
     typename cuckoohash_st_map<Key, T, Hash, Pred>::key_equal
     cuckoohash_st_map<Key, T, Hash, Pred>::eqfn;
-
-template <class Key, class T, class Hash, class Pred>
-    typename cuckoohash_st_map<Key, T, Hash, Pred>::GlobalHazardPointerList
-    cuckoohash_st_map<Key, T, Hash, Pred>::global_hazard_pointers;
-
-template <class Key, class T, class Hash, class Pred>
-    const size_t cuckoohash_st_map<Key, T, Hash, Pred>::kNumCores = 1;
 
 template <class Key, class T, class Hash, class Pred>
     const std::out_of_range
